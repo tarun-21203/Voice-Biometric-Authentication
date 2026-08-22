@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Voice Biometric — Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 1rem;
+        }
+
+        .result {
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Voice Biometric — Demo</h1>
+    <p>Upload one or two WAV/FLAC files. Use <strong>Embed</strong> to get a single embedding, or
+        <strong>Compare</strong> to compute cosine similarity between two files.</p>
+
+    <div>
+        <label>File A: <input id="fileA" type="file" accept="audio/*"></label>
+        <button id="embedA">Embed A</button>
+        <button id="downloadA" disabled>Download A</button>
+    </div>
+    <div style="margin-top:.5rem">
+        <label>File B: <input id="fileB" type="file" accept="audio/*"></label>
+        <button id="embedB">Embed B</button>
+        <button id="downloadB" disabled>Download B</button>
+    </div>
+    <div style="margin-top:.5rem">
+        <button id="compare">Compare (cosine)</button>
+    </div>
+
+    <div id="status"></div>
+    <div class="result" id="result"></div>
+
+    <script>
+        const fileA = document.getElementById('fileA')
+        const fileB = document.getElementById('fileB')
+        const embedA = document.getElementById('embedA')
+        const embedB = document.getElementById('embedB')
+        const compareBtn = document.getElementById('compare')
+        const status = document.getElementById('status')
+        const result = document.getElementById('result')
+        const downloadA = document.getElementById('downloadA')
+        const downloadB = document.getElementById('downloadB')
+
+        function makeDownloader(obj, filename) {
+            const data = JSON.stringify(obj)
+            const blob = new Blob([data], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = filename
+            a.click()
+            URL.revokeObjectURL(url)
+        }
+
+        async function doEmbed(fileElem, targetDownloadBtn, label) {
+            if (!fileElem.files.length) return alert('Choose a file')
+            const fd = new FormData()
+            fd.append('audio_file', fileElem.files[0])
+            status.textContent = `Uploading ${label}...`
+            result.textContent = ''
+            try {
+                const resp = await fetch('/api/embed', { method: 'POST', body: fd })
+                const data = await resp.json()
+                if (!resp.ok) throw data
+                status.textContent = 'OK'
+                result.textContent = `${label} embedding length: ${data.embedding.length}`
+                targetDownloadBtn.disabled = false
+                targetDownloadBtn.onclick = () => makeDownloader(data, `${label}_embedding.json`)
+            } catch (err) {
+                status.textContent = 'Error'
+                result.textContent = JSON.stringify(err)
+            }
+        }
+
+        embedA.onclick = () => doEmbed(fileA, downloadA, 'A')
+        embedB.onclick = () => doEmbed(fileB, downloadB, 'B')
+
+        compareBtn.onclick = async () => {
+            if (!fileA.files.length || !fileB.files.length) return alert('Choose both files')
+            const fd = new FormData()
+            fd.append('audio_a', fileA.files[0])
+            fd.append('audio_b', fileB.files[0])
+            status.textContent = 'Comparing...'
+            result.textContent = ''
+            try {
+                const resp = await fetch('/api/compare', { method: 'POST', body: fd })
+                const data = await resp.json()
+                if (!resp.ok) throw data
+                status.textContent = 'OK'
+                result.textContent = `Cosine similarity: ${data.cosine}\n\nEmbedding A length: ${data.embedding_a.length}\nEmbedding B length: ${data.embedding_b.length}`
+                downloadA.disabled = false
+                downloadB.disabled = false
+                downloadA.onclick = () => makeDownloader({ embedding: data.embedding_a }, 'embedding_A.json')
+                downloadB.onclick = () => makeDownloader({ embedding: data.embedding_b }, 'embedding_B.json')
+            } catch (err) {
+                status.textContent = 'Error'
+                result.textContent = JSON.stringify(err)
+            }
+        }
+    </script>
+</body>
+
+</html>
