@@ -1,0 +1,40 @@
+# Byte-compiled / caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large dataset directories (avoid committing full datasets)
+/audio-dev-clean/
+/LibriSpeech/
+/data/
+
+# Logs, results, temporary files
+logs/
+results/
+checkpoints/
+*.log
+*.tmp
+*.bak
+
+# Temporary or stray checkpoint files
+.ckpt-*.pt
+model.ckpt-*.pt
+
+# Do NOT ignore model files here if you plan to track them with Git LFS.
+# Instead, use .gitattributes and 'git lfs track' for large binary model files (*.pt).
